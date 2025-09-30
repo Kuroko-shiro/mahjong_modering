@@ -66,6 +66,12 @@ python local_cli.py --backend firebase --backend-option project_id=your-project 
   バックエンドをファクトリ経由で切り替えられるようになりました。Firebase 等へ
   移行する際は `StorageBackend` を実装してレジストリへ登録するだけで API は
   そのまま利用できます。
+- Firestore 連携を追加する場合は、`data_store/` 配下に `firebase_backend.py`
+  などのモジュールを作成し、`data_store/backend.py` に定義されている
+  `StorageBackend` 抽象クラスを実装します。実装したファクトリを
+  `LocalDataService.register_backend("firebase", FirebaseBackend)` のように
+  登録すれば、`local_data_service.py` や `local_cli.py` から
+  `--backend firebase` を指定するだけで Firestore を利用できます。
 - 既存フロントエンドアセット（`static/` ディレクトリ配下）はそのまま保守し、
   必要に応じて静的ホスティングサービスなどで提供してください。ローカルでの
   データ操作は本モジュールおよび CLI が担います。

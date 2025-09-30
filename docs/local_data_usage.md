@@ -2,15 +2,17 @@
 
 このドキュメントでは、ローカル環境で直接データを操作するための
 `local_data_service.py` と `local_cli.py` の使い方を説明します。プロジェクトから
-Flask バックエンドを完全に取り除き、SQLite データベースを直接扱う形に移行し
-ました。これにより HTTP 経由の通信を必要とせず、スクリプトや今後導入予定の
-Firebase など別の永続化層へ容易に切り替えられる土台が整っています。
+Flask バックエンドを完全に取り除き、バックエンドをプラグイン形式で切り替えら
+れる `data_store` レイヤーを導入しました。現在は SQLite 実装を利用しますが、同
+じインターフェースで Firebase バックエンドを後から追加できるよう設計されています。
 
 ## 1. Python API (`LocalDataService`)
 
-`LocalDataService` クラスは SQLite データベースへ直接アクセスする高水準
+`LocalDataService` クラスは登録済みの永続化バックエンドに委譲する高水準
 インターフェースを提供します。HTTP サーバーを立ち上げる必要がなくなるため、
-スクリプトやバッチ処理から簡単にデータを扱えます。
+スクリプトやバッチ処理から簡単にデータを扱えます。初期状態では SQLite 用の
+バックエンドが選択されますが、Firebase 実装が整い次第、同じサービス API を
+通じて切り替えられます。
 
 ```python
 from pathlib import Path
@@ -48,17 +50,22 @@ print(created)
 python local_cli.py list-seasons
 python local_cli.py create-player "新規プレイヤー"
 python local_cli.py export > snapshot.json
+
+# 別バックエンドを指定する例（Firebase 実装が登録されたら有効）
+python local_cli.py --backend firebase --backend-option project_id=your-project list-seasons
 ```
 
 `--database` オプションで任意の SQLite ファイルを指定することも可能です。
-バックエンドを含む追加のプロセスは不要で、CLI が直接データベースファイルを
-操作します。
+さらに `--backend` と `--backend-option` を使うことで、登録済みのバックエンドへ
+任意の接続情報を渡せます。バックエンドを含む追加のプロセスは不要で、CLI が
+直接永続化レイヤーを操作します。
 
 ## 3. 今後の移行について
 
-- Flask のルーティングロジックと完全に切り離したことで、今後 Firebase 等の別
-  実装に切り替える際は `LocalDataService` と同じインターフェースを備えた
-  サービスクラスを用意するだけで済みます。
+- Flask のルーティングロジックと完全に切り離し、`LocalDataService` が
+  バックエンドをファクトリ経由で切り替えられるようになりました。Firebase 等へ
+  移行する際は `StorageBackend` を実装してレジストリへ登録するだけで API は
+  そのまま利用できます。
 - 既存フロントエンドアセット（`static/` ディレクトリ配下）はそのまま保守し、
   必要に応じて静的ホスティングサービスなどで提供してください。ローカルでの
   データ操作は本モジュールおよび CLI が担います。

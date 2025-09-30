@@ -10,6 +10,18 @@ from typing import Any
 from local_data_service import LocalDataService, LocalDataServiceError
 
 
+def _parse_backend_options(values: list[str]) -> dict[str, str]:
+    options: dict[str, str] = {}
+    for item in values:
+        if "=" not in item:
+            raise ValueError(
+                f"Backend option '{item}' must be in KEY=VALUE format"
+            )
+        key, value = item.split("=", 1)
+        options[key] = value
+    return options
+
+
 def _print_json(data: Any) -> None:
     print(json.dumps(data, ensure_ascii=False, indent=2))
 
@@ -23,6 +35,18 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path(__file__).with_name("database.db"),
         help="Path to the SQLite database file",
+    )
+    parser.add_argument(
+        "--backend",
+        default="sqlite",
+        help="Name of the registered backend to use (default: sqlite)",
+    )
+    parser.add_argument(
+        "--backend-option",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="Extra option passed to the backend factory",
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -59,7 +83,16 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    service = LocalDataService(args.database)
+    try:
+        backend_options = _parse_backend_options(args.backend_option)
+    except ValueError as exc:
+        parser.error(str(exc))
+
+    service = LocalDataService(
+        args.database,
+        backend_name=args.backend,
+        backend_options=backend_options,
+    )
 
     try:
         if args.command == "list-seasons":
